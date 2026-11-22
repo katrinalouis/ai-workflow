@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="workflow-api-url" content="/save-workflow/">
+    <title>AI Workflow Simulator and Optimizer</title>
+    <!-- Custom Project Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Local Chart.js library for offline reliability -->
+    <script src="chart.umd.min.js"></script>
+</head>
+<body>
+
+    <aside class="sidebar" id="sidebar">
+        <h2>Workflow AI</h2>
+        <p class="menu-title">MAIN MENU</p>
+
+        <a href="#dashboard" class="sidebar-link active" onclick="switchPage('dashboard'); return false;">Dashboard</a>
+        <a href="#create-workflow" class="sidebar-link" onclick="switchPage('create-workflow'); return false;">Create Workflow</a>
+        <a href="#recent-workflows" class="sidebar-link" onclick="switchPage('recent-workflows'); return false;">My Workflows</a>
+        <a href="#workflow-diagram" class="sidebar-link" onclick="switchPage('workflow-diagram'); return false;">Workflow Graph</a>
+        <a href="#edit-workflow" class="sidebar-link" onclick="switchPage('edit-workflow'); return false;">Task Editor</a>
+        <a href="#results" class="sidebar-link" onclick="switchPage('results'); return false;">Simulation Results</a>
+        <a href="#analytics-section" class="sidebar-link" onclick="switchPage('analytics-section'); return false;">Performance Analytics</a>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h1 id="topbarTitle">Dashboard</h1>
+                <p id="topbarSubtitle">Manage, simulate and optimize business workflows with intelligent scheduling.</p>
+            </div>
+            <div class="topbar-actions">
+                <span id="apiStatusBadge" class="api-badge offline" title="Backend API Connection Status">
+                    ● Local Fallback Mode
+                </span>
+                <button type="button" id="authBtn" class="secondary-button" style="margin-top:0; padding:8px 14px; font-size:12px;" onclick="openAuthModal()">
+                    Sign In
+                </button>
+                <div class="user-profile" id="userAvatar" title="Guest User">G</div>
+            </div>
+        </header>
+
+        <!-- PAGE 1: DASHBOARD -->
+        <section class="app-page active" id="dashboard">
+            <div class="welcome">
+                <h2>Welcome to Workflow AI!</h2>
+                <p>Simulate real-world business processes, detect operational bottlenecks, and compare optimized schedules across 8 industry domains.</p>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <span>Total Workflows</span>
+                    <h2 id="totalWorkflows">0</h2>
+                </div>
+
+                <div class="stat-card">
+                    <span>Simulations Run</span>
+                    <h2 id="simulationsRun">0</h2>
+                </div>
+
+                <div class="stat-card">
+                    <span>Total Time Saved</span>
+                    <h2 id="timeSaved">0 min</h2>
+                </div>
+            </div>
+
+            <!-- Active Workflow Overview Card -->
+            <div class="panel">
+                <div class="panel-header-flex">
+                    <div>
+                        <h2>Active Selected Workflow</h2>
+                        <p id="dashboardActiveSummary">Loading active workflow...</p>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" onclick="switchPage('workflow-diagram')">Open Graph</button>
+                        <button type="button" class="secondary-button" style="margin-top:0;" onclick="switchPage('results')">Run Simulation</button>
+                        <button type="button" class="secondary-button" style="margin-top:0;" onclick="switchPage('analytics-section')">View Analytics</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Domain Workflow Distribution</h2>
+                <p>Distribution of configured processes across enterprise domains.</p>
+                <div class="chart-wrapper" style="height: 250px;">
+                    <canvas id="domainChartOverview"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 2: CREATE WORKFLOW -->
+        <section class="app-page" id="create-workflow">
+            <div class="page-header">
+                <h2>Create a New Workflow</h2>
+                <p>Select a business domain to generate an operational workflow template with multi-branch parallel dependencies.</p>
+            </div>
+
+            <div class="panel">
+                <label for="domain">Company Domain</label>
+                <select id="domain">
+                    <option value="IT & Software">IT & Software</option>
+                    <option value="E-Commerce">E-Commerce</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Banking & Finance">Banking & Finance</option>
+                    <option value="Human Resources">Human Resources</option>
+                    <option value="Education">Education</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Logistics">Logistics</option>
+                </select>
+
+                <div style="display: flex; gap: 12px; align-items: center; margin-top: 15px;">
+                    <button type="button" onclick="createWorkflow()">Generate Workflow</button>
+                    <button type="button" class="secondary-button" style="margin-top:0;" onclick="createNewCustomWorkflow()">Create Custom Blank Workflow</button>
+                </div>
+
+                <p id="message" class="message"></p>
+            </div>
+        </section>
+
+        <!-- PAGE 3: MY WORKFLOWS -->
+        <section class="app-page" id="recent-workflows">
+            <div class="page-header">
+                <h2>My Workflows</h2>
+                <p>Manage and switch between your created business workflows.</p>
+            </div>
+
+            <div class="panel">
+                <div id="workflowList">
+                    <p class="empty-message">No workflows created yet.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 4: WORKFLOW GRAPH -->
+        <section class="app-page" id="workflow-diagram">
+            <div class="page-header">
+                <h2>Workflow Dependency Graph (DAG)</h2>
+                <p>Interactive Directed Acyclic Graph with directional SVG arrows, execution states, and critical bottleneck path.</p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header-flex">
+                    <div>
+                        <h3 id="graphActiveTitle" style="color:#173b70; font-size:16px;">Active Graph</h3>
+                    </div>
+                    <div class="graph-legend">
+                        <span class="legend-item"><span class="legend-dot pending"></span> Pending</span>
+                        <span class="legend-item"><span class="legend-dot running"></span> Running</span>
+                        <span class="legend-item"><span class="legend-dot completed"></span> Completed</span>
+                        <span class="legend-item"><span class="legend-dot bottleneck"></span> Critical Bottleneck</span>
+                    </div>
+                </div>
+
+                <div id="diagramContainer" class="diagram-graph-container">
+                    <p class="empty-message">Generate a workflow to view its diagram.</p>
+                </div>
+
+                <div style="margin-top: 18px; display:flex; gap:12px;">
+                    <button type="button" class="secondary-button" style="margin-top:0;" onclick="switchPage('results')">Simulate This Graph</button>
+                    <button type="button" onclick="switchPage('edit-workflow')">Edit Graph Tasks</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 5: TASK EDITOR -->
+        <section class="app-page" id="edit-workflow">
+            <div class="page-header">
+                <h2>Edit Workflow Tasks</h2>
+                <p>Configure task names, durations in minutes, and prerequisite dependencies.</p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header-flex">
+                    <h3 id="editorActiveTitle" style="color:#173b70; font-size:16px;">Task List</h3>
+                    <button type="button" class="secondary-button" style="margin-top:0" onclick="addNewTask()">+ Add Task</button>
+                </div>
+
+                <div id="taskEditor">
+                    <p class="empty-message">Generate or select a workflow to edit its tasks.</p>
+                </div>
+
+                <div class="editor-controls">
+                    <button type="button" onclick="saveTaskChanges()">Save Changes</button>
+                    <button type="button" class="secondary-button" style="margin-top:0" onclick="validateCurrentWorkflow()">Validate Dependencies</button>
+                    <button type="button" class="secondary-button" style="margin-top:0; background:#2563eb;" onclick="switchPage('workflow-diagram')">Preview in Graph</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 6: SIMULATION RESULTS -->
+        <section class="app-page" id="results">
+            <div class="page-header">
+                <h2>Simulation & Optimization Results</h2>
+                <p>Analyze task concurrency, calculate CPM critical paths, and measure optimization savings.</p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header-flex">
+                    <p id="resultText">Create a workflow to view its simulation.</p>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="secondary-button" style="margin-top:0;" onclick="runSimulation()">
+                            ▶ Run Simulation
+                        </button>
+                        <button type="button" style="background:#0284c7;" onclick="exportReportCSV()">
+                            ⬇ Export CSV Report
+                        </button>
+                    </div>
+                </div>
+
+                <div id="simulationOutput"></div>
+
+                <div id="comparisonContainer" class="comparison-container"></div>
+                
+                <div class="progress-section">
+                    <h3>Estimated Time-Saving Progress</h3>
+                    <div class="progress-track">
+                        <div id="savingProgress" class="progress-fill"></div>
+                    </div>
+                    <p id="savingProgressText">Run a simulation to view progress.</p>
+                </div>
+
+                <!-- Algorithmic AI Recommendations Subpanel -->
+                <div style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                    <div class="panel-header-flex">
+                        <div>
+                            <h3 style="color:#173b70; font-size:16px;">Deterministic AI Process Recommendations</h3>
+                            <p style="font-size:12px; color:#64748b;">Algorithmic rule-based insights and bottleneck resolution strategies.</p>
+                        </div>
+                    </div>
+                    <div id="recommendationsContainer" class="recommendation-list">
+                        <p class="empty-message">Run a simulation to generate actionable process recommendations.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; display:flex; gap:12px;">
+                    <button type="button" onclick="switchPage('analytics-section')">Open Full Analytics Charts &rarr;</button>
+                    <button type="button" class="secondary-button" style="margin-top:0;" onclick="switchPage('workflow-diagram')">View Animated Graph</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 7: PERFORMANCE ANALYTICS -->
+        <section class="app-page" id="analytics-section">
+            <div class="page-header">
+                <div class="panel-header-flex">
+                    <div>
+                        <h2>Performance Analytics</h2>
+                        <p>Visual comparison of execution times, critical-path parallelization, and task duration breakdown.</p>
+                    </div>
+                    <button type="button" style="background:#0284c7;" onclick="exportReportCSV()">
+                        ⬇ Export Analysis CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Execution Time Comparison (Minutes)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Task Duration Breakdown & Bottleneck</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="taskDurationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card" style="grid-column: 1 / -1;">
+                    <h3>Domain Workflows Distribution</h3>
+                    <div class="chart-wrapper" style="height: 220px;">
+                        <canvas id="domainChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- AUTHENTICATION MODAL -->
+    <div id="authModal" class="modal-overlay" onclick="closeAuthModalOnBackdrop(event)">
+        <div class="modal-dialog-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modalTitle" style="font-size: 18px; color: #173b70; font-weight: 700;">Account Authentication</h3>
+                <button type="button" class="modal-close-btn" onclick="closeAuthModal()">&times;</button>
+            </div>
+
+            <div class="modal-tabs">
+                <button type="button" id="tabLoginBtn" class="modal-tab-btn active" onclick="switchAuthTab('login')">Sign In</button>
+                <button type="button" id="tabRegisterBtn" class="modal-tab-btn" onclick="switchAuthTab('register')">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+                <div class="modal-form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required autocomplete="username" placeholder="e.g. pruthvika">
+                </div>
+                <div class="modal-form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="••••••••">
+                </div>
+                <button type="submit" style="width:100%; margin-top:10px;">Sign In</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" style="display:none;" onsubmit="handleRegisterSubmit(event)">
+                <div class="modal-form-group">
+                    <label for="regUsername">Username</label>
+                    <input type="text" id="regUsername" required autocomplete="username" placeholder="Choose a username">
+                </div>
+                <div class="modal-form-group">
+                    <label for="regEmail">Email Address (Optional)</label>
+                    <input type="email" id="regEmail" autocomplete="email" placeholder="name@company.com">
+                </div>
+                <div class="modal-form-group">
+                    <label for="regPassword">Password (Min 6 chars)</label>
+                    <input type="password" id="regPassword" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+                </div>
+                <button type="submit" style="width:100%; margin-top:10px;">Create Account</button>
+            </form>
+
+            <div id="authErrorMsg" class="modal-error-msg"></div>
+            <div id="authSuccessMsg" class="modal-success-msg"></div>
+        </div>
+    </div>
+
+    <!-- Project Script -->
+    <script src="script.js"></script>
+</body>
+</html>
